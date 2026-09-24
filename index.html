@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fire Extinguisher Location</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:20px}
+h1{font-size:26px}
+#gpsButton{width:100%;padding:18px;font-size:20px;font-weight:bold;border:0;border-radius:8px;cursor:pointer;margin:10px 0}
+#gpsStatus{padding:15px;margin-bottom:20px;border-radius:8px;background:#f2f2f2;line-height:1.4}
+.coordinates{font-family:monospace}
+</style>
+</head>
+<body>
+<h1>Fire Extinguisher Location</h1>
+<button id="gpsButton" type="button">Use My Current Location</button>
+<div id="gpsStatus">Location not captured.</div>
+
+<script src="https://www.cognitoforms.com/f/seamless.js" data-key="2ZgTWFZjNkGJ7F5lXdNAgw" data-form="27"></script>
+
+<script>
+document.getElementById("gpsButton").addEventListener("click",function(){
+ const b=this,s=document.getElementById("gpsStatus");
+ b.disabled=true;b.textContent="Getting Location...";
+ if(!navigator.geolocation){s.textContent="Location services are not supported by this browser.";b.disabled=false;b.textContent="Try Again";return;}
+ navigator.geolocation.getCurrentPosition(function(p){
+  const lat=Number(p.coords.latitude.toFixed(6)),lon=Number(p.coords.longitude.toFixed(6)),acc=Math.round(p.coords.accuracy);
+  try{
+   Cognito.prefill({Latitude:lat,Longitude:lon});
+   s.innerHTML="<strong>Location captured.</strong><br><span class='coordinates'>"+lat+", "+lon+"</span><br>Reported accuracy: about "+acc+" meters.";
+   b.textContent="Location Captured";
+  }catch(e){
+   s.textContent="GPS was captured, but Cognito could not be filled. Verify the internal field names are Latitude and Longitude.";
+   b.disabled=false;b.textContent="Try Again";
+  }
+ },function(e){
+  let m="Unable to get your location.";
+  if(e.code===1)m="Location permission was denied. Allow location access for this site and try again.";
+  else if(e.code===2)m="Your location could not be determined. Move to an area with a clearer GPS signal and try again.";
+  else if(e.code===3)m="The location request timed out. Try again.";
+  s.textContent=m;b.disabled=false;b.textContent="Try Again";
+ },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+});
+</script>
+</body>
+</html>
