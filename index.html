@@ -1,85 +1,129 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fire Extinguisher Location</title>
-<style>
-body{font-family:Arial,sans-serif;max-width:700px;margin:auto;padding:20px}
-h1{font-size:26px}
-#gpsButton{width:100%;padding:18px;font-size:20px;font-weight:bold;border:0;border-radius:8px;cursor:pointer;margin:10px 0}
-#gpsStatus,#diagnostics{padding:15px;margin:10px 0 20px;border-radius:8px;background:#f2f2f2;line-height:1.45}
-#diagnostics{font-family:monospace;font-size:13px;white-space:pre-wrap}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fire Extinguisher Location</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 16px;
+      background: #ffffff;
+    }
+    h1 {
+      font-size: 26px;
+      margin: 0 0 16px;
+    }
+    #gpsButton {
+      width: 100%;
+      min-height: 58px;
+      padding: 14px 18px;
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 700;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #0b6e4f;
+      color: #fff;
+    }
+    #gpsButton:disabled {
+      opacity: 0.7;
+      cursor: default;
+    }
+    #gpsStatus {
+      padding: 12px 14px;
+      margin: 0 0 18px;
+      border-radius: 8px;
+      background: #f1f3f4;
+      line-height: 1.45;
+      font-size: 16px;
+    }
+    .coordinates {
+      font-family: Consolas, monospace;
+    }
+    #cognitoForm {
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
-<h1>Fire Extinguisher Location</h1>
-<button id="gpsButton" type="button">Use My Current Location</button>
-<div id="gpsStatus">Location not captured.</div>
-<details>
-<summary>Diagnostics</summary>
-<div id="diagnostics">Ready.</div>
-</details>
+  <h1>Fire Extinguisher Location</h1>
 
-<div id="cognitoForm"></div>
+  <button id="gpsButton" type="button">Use My Current Location</button>
+  <div id="gpsStatus">Location not captured.</div>
 
-<script src="https://www.cognitoforms.com/f/seamless.js"
-        data-key="2ZgTWFZjNkGJ7F5lXdNAgw"
-        data-form="27"></script>
+  <div id="cognitoForm"></div>
 
-<script>
-(function(){
- const b=document.getElementById("gpsButton");
- const s=document.getElementById("gpsStatus");
- const d=document.getElementById("diagnostics");
+  <!-- Cognito Seamless API: loaded once. The form is mounted below by JavaScript. -->
+  <script src="https://www.cognitoforms.com/f/seamless.js"></script>
 
- function log(x){d.textContent += "\n"+x;}
+  <script>
+    (function () {
+      const button = document.getElementById("gpsButton");
+      const status = document.getElementById("gpsStatus");
 
- b.addEventListener("click",function(){
-   if(!navigator.geolocation){
-     s.textContent="This browser does not support geolocation.";
-     return;
-   }
-   b.disabled=true;
-   b.textContent="Getting Location...";
-   s.textContent="Requesting GPS location...";
+      // Your Cognito organization key and Form 27.
+      // Only mount the form here so it appears exactly once.
+      const cognito = Cognito("2ZgTWFZjNkGJ7F5lXdNAgw");
+      const form = cognito.mount("27", "#cognitoForm");
 
-   navigator.geolocation.getCurrentPosition(function(pos){
-     const lat=Number(pos.coords.latitude.toFixed(6));
-     const lon=Number(pos.coords.longitude.toFixed(6));
-     const acc=Math.round(pos.coords.accuracy);
+      button.addEventListener("click", function () {
+        button.disabled = true;
+        button.textContent = "Getting Location...";
+        status.textContent = "Requesting your phone's location...";
 
-     s.innerHTML="<strong>GPS captured.</strong><br>"+lat+", "+lon+
-       "<br>Reported accuracy: about "+acc+" meters.<br>Loading these coordinates into the form...";
-     log("GPS: "+lat+", "+lon);
-     log("Accuracy: "+acc+" m");
+        if (!navigator.geolocation) {
+          status.textContent = "Location services are not supported by this browser.";
+          button.disabled = false;
+          button.textContent = "Use My Current Location";
+          return;
+        }
 
-     try{
-       const mounted=Cognito.mount("27","#cognitoForm");
-       log("Cognito.mount succeeded.");
-       mounted.prefill({Latitude:lat,Longitude:lon});
-       log('Prefill sent: {"Latitude":'+lat+',"Longitude":'+lon+"}");
-       s.innerHTML="<strong>Location captured and sent to Cognito.</strong><br>"+
-         lat+", "+lon+"<br>Reported accuracy: about "+acc+" meters.";
-       b.textContent="Location Captured";
-     }catch(err){
-       log("ERROR: "+(err && err.stack ? err.stack : err));
-       s.textContent="GPS was captured, but Cognito returned an error. Open Diagnostics below and send me what it says.";
-       b.disabled=false;
-       b.textContent="Try Again";
-     }
-   },function(err){
-     log("Geolocation error code: "+err.code+" / "+err.message);
-     s.textContent=err.code===1
-       ?"Location permission was denied. Allow location access and try again."
-       :err.code===2
-       ?"Your location could not be determined. Try again outdoors."
-       :"The GPS request timed out. Try again.";
-     b.disabled=false;
-     b.textContent="Try Again";
-   },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
- });
-})();
-</script>
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            const latitude = Number(position.coords.latitude.toFixed(6));
+            const longitude = Number(position.coords.longitude.toFixed(6));
+            const accuracy = Math.round(position.coords.accuracy);
+
+            // These are the Cognito JSON names shown in your screenshots.
+            form.prefill({
+              Latitude: latitude,
+              Longitude: longitude
+            });
+
+            status.innerHTML =
+              "<strong>Location captured.</strong><br>" +
+              "<span class=\"coordinates\">" + latitude + ", " + longitude + "</span><br>" +
+              "Reported accuracy: about " + accuracy + " meters.";
+
+            button.textContent = "Location Captured";
+          },
+          function (error) {
+            let message = "Unable to get your location.";
+
+            if (error.code === 1) {
+              message = "Location permission was denied. Allow location access for this site and try again.";
+            } else if (error.code === 2) {
+              message = "Your location could not be determined. Try again outdoors.";
+            } else if (error.code === 3) {
+              message = "The GPS request timed out. Try again.";
+            }
+
+            status.textContent = message;
+            button.disabled = false;
+            button.textContent = "Try Again";
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0
+          }
+        );
+      });
+    })();
+  </script>
 </body>
 </html>
