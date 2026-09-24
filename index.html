@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fire Extinguisher Location</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1 { font-size: 26px; }
+  #gpsButton {
+    width: 100%;
+    padding: 18px;
+    font-size: 20px;
+    font-weight: bold;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 10px 0;
+    background: #e85b2a;
+    color: white;
+  }
+  #gpsButton:disabled {
+    opacity: .7;
+    cursor: wait;
+  }
+  #gpsStatus {
+    padding: 15px;
+    margin: 10px 0 20px;
+    border-radius: 8px;
+    background: #f2f2f2;
+    line-height: 1.45;
+  }
+  .coordinates {
+    font-family: monospace;
+    font-size: 16px;
+  }
+  #cognitoForm {
+    margin-top: 20px;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Fire Extinguisher Location</h1>
+
+<button id="gpsButton" type="button">Use My Current Location</button>
+
+<div id="gpsStatus">
+  Tap the button above while standing at the extinguisher.
+</div>
+
+<div id="cognitoForm"></div>
+
+<!-- Cognito's Seamless library -->
+<script src="https://www.cognitoforms.com/f/seamless.js"></script>
+
+<script>
+(function () {
+  const button = document.getElementById("gpsButton");
+  const status = document.getElementById("gpsStatus");
+  const container = document.getElementById("cognitoForm");
+
+  button.addEventListener("click", function () {
+    button.disabled = true;
+    button.textContent = "Getting Location...";
+    status.textContent = "Requesting your phone's GPS location...";
+
+    if (!navigator.geolocation) {
+      status.textContent =
+        "Location services are not supported by this browser.";
+      button.disabled = false;
+      button.textContent = "Try Again";
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        const latitude =
+          Number(position.coords.latitude.toFixed(6));
+        const longitude =
+          Number(position.coords.longitude.toFixed(6));
+        const accuracy =
+          Math.round(position.coords.accuracy);
+
+        status.innerHTML =
+          "<strong>Location captured.</strong><br>" +
+          "<span class='coordinates'>" +
+          latitude + ", " + longitude +
+          "</span><br>" +
+          "Reported accuracy: about " +
+          accuracy + " meters.<br>" +
+          "Loading form...";
+
+        /*
+         * IMPORTANT:
+         * Form 27 is mounted only AFTER GPS is known.
+         * The Latitude/Longitude values are passed during
+         * the mount + prefill operation.
+         */
+        try {
+          const api = Cognito("2ZgTWFZjNkGJ7F5lXdNAgw");
+
+          api.mount("27", "#cognitoForm").prefill({
+            Latitude: latitude,
+            Longitude: longitude
+          });
+
+          button.textContent = "Location Captured";
+          status.innerHTML =
+            "<strong>Location captured.</strong><br>" +
+            "<span class='coordinates'>" +
+            latitude + ", " + longitude +
+            "</span><br>" +
+            "Reported accuracy: about " +
+            accuracy + " meters.";
+        } catch (error) {
+          console.error(error);
+          status.innerHTML =
+            "<strong>GPS was captured, but the Cognito form could not be loaded.</strong><br>" +
+            "Please refresh the page and try again.";
+          button.disabled = false;
+          button.textContent = "Try Again";
+        }
+      },
+
+      function (error) {
+        let message =
+          "Unable to get your location.";
+
+        if (error.code === 1) {
+          message =
+            "Location permission was denied. Allow location access for this site and try again.";
+        } else if (error.code === 2) {
+          message =
+            "Your location could not be determined. Try again outdoors.";
+        } else if (error.code === 3) {
+          message =
+            "The GPS request timed out. Try again.";
+        }
+
+        status.textContent = message;
+        button.disabled = false;
+        button.textContent = "Try Again";
+      },
+
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0
+      }
+    );
+  });
+})();
+</script>
+
+</body>
+</html>
